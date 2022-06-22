@@ -6,6 +6,8 @@ output:
   xaringan::moon_reader:
     css: [useR, useR-fonts]
     lib_dir: libs
+editor_options: 
+  chunk_output_type: console
 ---
 
 ```{r setup, include=FALSE}
@@ -27,6 +29,7 @@ library(gridExtra)
 library(xaringanthemer)
 library(GGally)
 library(plotly)
+library(tourr)
 ```
 
 ```{r xaringan-themer, include=FALSE, warning=FALSE}
@@ -560,7 +563,8 @@ load("data/AFLW_scags.rda")
 
 #rename for new scag
 AFLW_scags <- AFLW_scags %>%
-  rename(striated2 = striated_adjusted)
+  rename(striated2 = striated_adjusted) %>%
+  rename(clumpy2 = clumpy_adjusted)
 
 # add a label
 AFLW_splom <- AFLW_scags %>%
@@ -784,15 +788,129 @@ ggplotly(s5)%>%
 
 ---
 # Top Summaries
-- `top_scags()` and `top_pairs()`
+- `top_pairs()`
+```{r, include=FALSE}
+AFLW_scags <- AFLW_scags %>%
+  rename(striated2 = striated_adjusted) %>%
+  rename(clumpy2 = clumpy_adjusted) %>%
+  select(-c(clumpy, striated))
+```
 
-```{r}
-
+```{r, echo=TRUE}
+AFLW_pairs <- top_pairs(AFLW_scags)
+head(AFLW_pairs)
 ```
 ???
 - The cassowaryr package also has two functions that summarise the scagnostic information, they are top_scags() and top_pairs().
-- 
+- the top_scags() function gives the top scagnostic for each scatter plot,
 
+---
+# Top Summaries
+- `top_pairs()`
+```{r, echo=TRUE}
+table(AFLW_pairs$scag)
+```
+
+???
+- since they are supposed to be directly comparable on a 0 to 1 scale, if one scagnostic appears a lot, it is likely an underlying structure through the whole data set
+
+---
+# Top Summaries
+- `top_scags()` and `top_pairs()`
+
+```{r, echo=TRUE}
+#scags with short named scatter plots so they fit
+top_scags(AFLW_scags)[-c(3,4),] 
+```
+
+???
+- while top_gives() gives you the scatter plot that had the highest value on that scatter plot for each scagnostic
+- a reccuring scatter plot that is high on a lot of measures is likely an outlier scatter plot that has an interesting structure
+
+---
+# Projection Pursuit Index
+
+```{r eval=FALSE, echo=FALSE, warning=FALSE}
+# set seed
+set.seed(2020)
+# get L-shape data
+lshape <- features %>% 
+  filter(feature=="l-shape")
+
+# make tibble group a
+feature_vs_noise_A <- tibble(x1 = 2.5* cassowaryr:::unitize(lshape$x),
+                           x2 = rnorm(100, 0.5, 1),
+                           x3 = rnorm(100, 0.5, 1),
+                           x4 = 2.5* cassowaryr:::unitize(lshape$y),
+                           x5 = rnorm(100, 0.5, 1),
+                           group = rep("A",100)
+                           )
+
+# Make tibble group b
+feature_vs_noise_B <- tibble(x1 = rnorm(100, 0.5, 1),
+                           x2 = rnorm(100, 0.5, 1),
+                           x3 = rnorm(100, 0.5, 1),
+                           x4 = rnorm(100, 0.5, 1),
+                           x5 = rnorm(100, 0.5, 1),
+                           group = rep("B",100)
+                           )
+
+
+# combine tibbles
+feature_vs_noise <- bind_rows(feature_vs_noise_A, feature_vs_noise_B)
+
+set.seed(20190401)
+bases <- readRDS("figures/tour_skinny_bet_7_500_5_.rds")
+tour_path <- interpolate(bases, 0.1)
+d <- dim(tour_path)
+flea_std <- tourr::rescale(feature_vs_noise[,1:5])
+mydat <- NULL; myaxes <- NULL
+for (i in 1:d[3]) {
+  fp <- as.matrix(feature_vs_noise[,1:5]) %*% matrix(tour_path[,,i], ncol=2)
+  fp <- tourr::center(fp)
+  colnames(fp) <- c("d1", "d2")
+  mydat <- rbind(mydat, cbind(fp, rep(i+10, 2*nrow(fp))))
+  fa <- cbind(matrix(0, 5, 2), matrix(tour_path[,,i], ncol=2))
+  colnames(fa) <- c("origin1", "origin2", "d1", "d2") 
+  myaxes <- rbind(myaxes, cbind(fa, rep(i+10, 2*nrow(fa))))
+}
+colnames(mydat)[3] <- "indx"
+colnames(myaxes)[5] <- "indx"
+df <- as_tibble(mydat) %>% 
+  mutate(species = rep(feature_vs_noise$group, d[3]))
+dfaxes <- as_tibble(myaxes) %>%
+  mutate(labels=rep(colnames(feature_vs_noise[,1:5]), d[3]))
+dfaxes_mat <- dfaxes %>%
+  mutate(xloc = rep(max(df$d1)+0.4, d[3]*5), yloc=rep(seq(-0.2, 0.2, 0.1), d[3]), 
+         coef=paste(round(dfaxes$d1, 2), ", ", round(dfaxes$d2, 2)))
+p <- ggplot() +
+       geom_segment(data=dfaxes, aes(x=d1/2-1.4, xend=origin1-1.4, 
+                                     y=d2/2, yend=origin2, 
+                                     frame = indx), colour="grey70") +
+       geom_text(data=dfaxes, aes(x=d1/2-1.4, y=d2/2, label=labels, 
+                                  frame = indx), colour="grey70") +
+       geom_point(data = df, aes(x = d1, y = d2, colour=species, 
+                                 frame = indx), size=1) +
+       geom_text(data=dfaxes_mat, aes(x=xloc, y=yloc, 
+                                  label=coef, frame = indx)) + 
+       scale_colour_brewer(palette = "Dark2") +
+       theme_void() +
+       coord_fixed() +
+  theme(legend.position="none")
+pg <- ggplotly(p, width=700, height=400) %>%
+  animation_opts(200, redraw = FALSE, 
+                 easing = "linear", transition=0)
+htmltools::save_html(pg, file="scagtour.html")
+```
+
+<iframe src="scagtour.html" width="800" height="500" scrolling="yes" seamless="seamless" frameBorder="0"> </iframe>
+
+
+???
+- All the methods I have been through so far have been how you will typically use scagnostics as an exploratory data method
+- We have done a bit more work into using the scagnostics as a projection pursuit measure in the tour package
+- this is an example of a guided tour that is trying to find the projection that maximises the difference in the convex scagnostic between the two groups
+- There has been quite a bit of 
 ---
 # Is it on CRAN?
 
@@ -844,5 +962,4 @@ class: centre, middle
 - Thanks for listening,
 - here is the link to the package if you want to have some fun with scagnostics
 - And I'm now happy to take any questions
-  
----
+
