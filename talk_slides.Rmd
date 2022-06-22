@@ -263,7 +263,7 @@ CAlculate Scagnostics on Scatterplots Over Wads of Associated Real numberYs in R
 - The scagnostic functions will probably never be used by anyone on the user end because they are more under the hood functions
 - The summary functions are how most people will use the cassowaryr package. The long version calculated the scagnostics on two variables for each group in your data, and the wide version for each pair of variables.
 - There are two further summary statistics that find the top pairs and top scags for each scatter plot
-- The draw functions are mostly a debugging tool, they are designed to help you see the graph based objects so you can better understand the measure outputs
+- The draw functions are mostly a debugging tool, they are designed to help you see the graph based objects so you can better understand the measure outputs.
 - The package also comes with a bit of data, datasaurus dozen and Anscomb quartet are fameous data sets that look different but have the same summary statistics, and the features data made by us.
 
 ---
@@ -422,7 +422,7 @@ visual_table <- ggplot(plot_data, aes(x=value , y=scagnostic, colour=feature))+
 #ggsave("figures/visual_table.png", visual_table, width=10, height=10)
 ```
 
-```{r, Show Visual Table, echo=FALSE, fig.height=5, fig.width=7.5, out.width = "100%", fig.align='center'}
+```{r, Show Visual Table, echo=FALSE, fig.height=6, fig.width=9, out.width = "100%", fig.align='center'}
 visual_table
 ```
 
@@ -447,7 +447,7 @@ visual_table
 ```{r,  Clumpy Comparison, include=FALSE}
 plot_data_clumpy <- plot_path_data %>%
   group_by(scagnostic, feature) %>%
-  mutate(doplot = ifelse(all(scagnostic %in% c("clumpy","clumpy_adjusted"), 
+  mutate(doplot = ifelse(all(scagnostic %in% c("clumpy","clumpy2"), 
                              feature %in% c("vlines", "clusters","barrier", "outliers", "nonlinear1", 	
 "nonlinear2")),
                          TRUE,
@@ -483,9 +483,9 @@ clumpy_visual_table <- ggplot(plot_data_clumpy, aes(x=value , y=scagnostic))+
 clumpy_visual_table
 ```
 ???
-- Here is the same visual table but we are only plotting clumpy with clumpy_adjusted
+- Here is the same visual table but we are only plotting clumpy with clumpy2
 - you can see clumpy adjusted both does a better job of identifying the clusters plot as it appears relatively higher on the measure and also is more uniform from 0 to 1.
-- This measure is still being adjusted, but even in its current state it performs quite well.
+- This measure is still being adjusted as it is quite slow, but even in its current state it performs better than the original measure without binning.
 
 ---
 # AFLW Example: The Data
@@ -502,11 +502,78 @@ clumpy_visual_table
   
   
 ???
-- While it is nice to know that the scagnostics work, correctly ordering scatter plots is not what they are going to be used for, the measures need to be able to pick out interesting scatter plots from a large selection of scatter plots
+- While it is nice to know that the scagnostics work, correctly ordering scatter plots is not what they are used for, the measures need to be able to pick out interesting scatter plots from a large selection of scatter plots
 - In order to do show that they do, in fact do this, I'm going to give an example using data from the AFLW 2020 season
 - This data set is large, and has more pairs of variables than we could plot ourselves
 - Hopefully the scagnostics will pick out some interesting pairs of variables
+---
+# AFLW Example: The Data
 
+```{r, echo=TRUE, eval=FALSE}
+# Get AFLW data
+aflw <- fitzroy::fetch_player_stats(2020, comp = "AFLW")
+
+# Scagnostics only work on numeric measures
+aflw_num <- aflw %>%
+  select_if(is.numeric)
+
+# Calculate average all games in the season
+aflw_num <- aggregate(aflw_num[,5:37], 
+  list(aflw$player.player.player.surname),
+  mean)
+
+# Calculate scagnostics
+AFLW_scags <- calc_scags_wide(aflw_num[,c(2:34)])
+```
+???
+- So we fetch the data using the fitzroy package, and we have to make sure we are only using numeric variables since scagnostics only work on numeric variable
+- Then we use the calc_scags_wide function to calculate every scagnostic on every possible pair of variables. This one can be a bit computationally heavy so you do have to leave it for a bit.
+- Once you have this data the best way to analyse it is to look at a SPLOM of the scagnostics. 
+
+---
+# AFLW Example: SPLOM
+
+```{r, echo=TRUE, eval=FALSE}
+# add a label
+AFLW_splom <- AFLW_scags %>%
+  mutate(lab = paste0(Var1, ", ", Var2))
+
+# make SPLOM
+p <- GGally::ggpairs(AFLW_splom, columns=c(3,6,10,14,15),
+                     aes(label=lab)) +
+  theme_classic()
+ggplotly(p)
+```
+
+???
+- Unfortunately a SPLOM of all the scagnostics won't fit on the slides so for this example I've made one with only a subset 
+- you want to make the label the variable names, and use an interactive plot to find the scatter plots that are interesting
+
+---
+# AFLW Example: SPLOM
+
+```{r, fig.width=6, fig.height=6, fig.align='center',}
+#LOAD DATA
+load("data/aflw.rda")
+load("data/aflw_num.rda")
+load("data/AFLW_scags.rda")
+
+#rename for new scag
+AFLW_scags <- AFLW_scags %>%
+  rename(striated2 = striated_adjusted)
+
+# add a label
+AFLW_splom <- AFLW_scags %>%
+  mutate(lab = paste0(Var1, ", ", Var2))
+
+# make SPLOM
+p <- GGally::ggpairs(AFLW_splom, columns=c(3,6,10,14,15), aes(label=lab)) +
+  theme_classic()
+p #ggplotly(p)
+```
+
+???
+- Now we look for plots that are different to the rest on the scagnostics
 ---
 # AFLW Example: Quiz!
 ```{r, include=FALSE, eval=FALSE}
@@ -521,28 +588,8 @@ aflw_num <- aggregate(aflw_num[,5:37],
   mean)
 save(aflw_num, file="data/aflw_num.rda")
 
-AFLW_scags <- calc_scags_wide(aflw_num[,c(2,3,5:34)])
+AFLW_scags <- calc_scags_wide(aflw_num[,c(2:34)])
 save(AFLW_scags, file="data/AFLW_scags.rda")
-```
-
-```{r debug, eval=FALSE}
-devtools::load_all()
-library(fitzRoy)
-library(dplyr)
-library(dplyr)
-aflw <- fetch_player_stats(2020, comp = "AFLW")
-aflw_num <- aflw %>%
-  select_if(is.numeric)
-aflw_num <- aggregate(aflw_num[,5:37], 
-  list(aflw$player.player.player.surname),
-  mean)
-x <- aflw_num$goals
-y <- aflw_num$handballs
-dupes <- paste(x, y, sep =",")
-xy <- cbind(unitize(x), unitize(y))
-x <- xy[!duplicated(dupes),]
-y = NULL
-#scree(aflw_num$goals, aflw_num$handballs)
 ```
 
 ```{r, AFLW Scatter Plots, echo=FALSE, fig.height=5, fig.width=9, out.width = "95%", fig.align='center'}
@@ -599,8 +646,7 @@ Which of these scatter plots was not identified  (have a high value) by scagnost
 - So, we run the scagnostics on this data and it tells us how interesting each scatter plot is
 - 5 of these scatter plots had a high value, or a strange combination on one or more of the 11 scagnostics
 - one of them were just two variables I plotted against each other not really knowing what they looked like
-- Ill give you 10 seconds to type in the chat which plot number you think was the one I picked at random
-- I have quizzed a few people on this already, among people who know nothing about statistics there is a 50% success rate, among people who are somewhat educated in statistics there is a 0% sucess rate
+- Ill give you 10 seconds to try and guess which plot number you think was the one I picked at random before I change the slide
 
 ---
 # AFLW Example: Plot 6!
@@ -623,8 +669,9 @@ grid.arrange(p6, p7, p8, nrow=1)
 
 ???
 - It was plot 6! I picked the two variables that were the easiest to spell.
-- Here is plot 6 alongside w other plots that were chosen by me without knowing what they would look like
-- but, how did I use scagnostics to pick the other 5? well let me explain
+- Here is plot 6 alongside two other randomly chosen plots 
+- These plots don't have structure that is as interesting as the plots chosen with scagnostics
+- I'll show you how a couple of them were selected.
   
 ---
 # AFLW Example: Plot 1
@@ -698,8 +745,6 @@ ggplotly(s2)%>%
 - This plot is really high on the association measures
 - usually a plot that deviates from this big mass, in the middle has a non-linear relationship in the scatter plot
 - we dont have that here, so total posessions and disposals have the strongest linear relationships
-- total posessions is the number of times you have the ball, disposals is the number of times you got rid of it legally
-- that makes sense since this is a profesisonal league, so most of the time a player is getting rid of the ball it is legally.
 
 ---
 # AFLW Example: Plot 5
@@ -732,32 +777,21 @@ ggplotly(s5)%>%
 ???
 - This plot is the last we will look at, and its my favourite
 - it was identifiable because it was high on striated adjsuted and low on outlying, so all the points are at right angles and a little spread out
-- The reason I love this plot is its not about player position, but rather physical skill of AFL players.
-- In the plots with lower triangualr structures like plot 4, midfielders covered the gap between defenders and forwards, here it is clear almost nobody does both bounces and hitouts
+- This plot clearly shows that almost no players do both bounces and hitouts
 -  hitouts are when you punch the ball when the ref throws it back in and they are done by your tall players, bounces have to be done while running so they are done by your fast players
-- in AFL these two categories seem to have no overlap
-- I find that so strange
+- In AFL these two categories seem to have no overlap, tall and fast are mutually exclusive
+- This is a fun example of what we can learn from our data
 
 ---
+# Top Summaries
+- `top_scags()` and `top_pairs()`
 
-# How Have Other people Used Scagnostics?
-- Identify interesting sub-sequences from multivariable time series data (TimeSeer) (Dang et al, 2013)
-  
+```{r}
 
-- Sample panels from a trellis display (Hafen et al, 2013)
-  
-- Select good partitioning variables for small multiple displays (Anand et al 2015)
-  
-- Use them to choose appropriate data transformations (Dang et al, 2014)
-  
-- Explore interesting low-dimensional random projections of high-dimensional data (Laa et al, 2018)
-  
-
+```
 ???
-- So, we are going to use the scagnsotics on sports data, but where have other people used them
-- my favourite is the use in the timeseer paper. 
-- In the timeseer paper scagnsotics were used to identify periods of time where two variables, like GDP and Inflation had a similar shape across the scatter plots of countries
-- They have an interactive trellis plot made using the package trelliscope and it uses scagnostics in one of its features
+- The cassowaryr package also has two functions that summarise the scagnostic information, they are top_scags() and top_pairs().
+- 
 
 ---
 # Is it on CRAN?
