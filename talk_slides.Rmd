@@ -179,7 +179,8 @@ knitr::include_graphics("figures/drawconvex.png")
 ```
 
 ???
-- an example of a hull based scagnostic is convex, it just takes the ratio of the two hull areas
+- To understand some of these scagnostics it helps to see some examples,
+- Convex is a hull based measure, it is just takes the ratio between the alpha and convex hull
 
 ---
 
@@ -192,8 +193,8 @@ knitr::include_graphics("figures/drawoutlying.png")
 ```
 
 ???
-- outlying is an example of an minimum spanning tree object
-- we first identify the outlying points and the length of their edges, then we calculate how much of the total MST length is due to these outling edges
+- Outlying is an example of a measure that uses the minimum spanning tree
+- First we identify the outlying points and the length of their edges, then we calculate how much of the total MST length is due to these outling edges
 
 ---
 
@@ -206,8 +207,8 @@ knitr::include_graphics("figures/drawsplines.png")
 ```
 
 ???
-- splines is an example of an association measure, so it take in the raw data
-- it calculates a two splines models, one with x as a dependent variable and one with y as the dependent variable
+- Splines is an example of an association measure, so it take in the raw data
+- it calculates two splines models, one with x as a dependent variable and one with y as the dependent variable
 - if either of these splines models have very low variance in their residuals, the splines scagnostic will be high
 
 
@@ -224,35 +225,46 @@ knitr::include_graphics("figures/drawsplines.png")
  
 
 ???
+- There are a couple rules for the scagnostics, they aren't just a free for all, as well as defining several scagnostics the "Scagnostic Distributions" paper by Leland Wilkson and Graham Wills also specifies some rules these measures and other newly defined measures must follow.
+- They should all be on a uniform scale so they are directly comparable
+- Each scagnostics should also order the scatter plots in a way that lines up with human intuition
+- Finally the scagnostics should be mostly uncorrelated. If two measures are highly correlated they are probably identifying a similar visual structure and we could do without one of the scagnostics.
+- Of course these are not all 100% achievable, but these assessments should be kept in mind when adjusting and creating scagnostics.
 
-- We want to assess the current scagnostics before we make any changes to them, yknow, make sure they work as intended
-- We want them on a uniform scale so they are directly comparable
-- we also want them to order the scatter plots from something like the features data in a way that lines up with human intuition, it wont always happe, but most of the time
-- If they have high correlation the second scagnsotic is adding less to the package, but sometimes it is required for the scagnostics to be correlated, just because they are looking for similar things
+---
+# The CassowaryR Package
+## Name
+CAlculate Scagnostics on Scatterplots Over Wads of Associated Real numberYs in R
+
+???
+- If you want to calculate these scagnostics yourself, you can do it very easily with the cassowaryr package
+- I will tell you that the package is named after the cassowary bird for no reason other than that its Australian and I resepect how fearsome they are
+- My supervisor Di would tell you the name is an acronym and it stands for  CAlculate Scagnostics on Scatterplots Over Wads of Associated Real numberYs in R
+- Although that is getting very liberal with the defintion of an acronym
+
 ---
 
 # The CassowaryR Package
 ## Structure
-
-- Calculate Functions   
-    + Wide and Long Versions  
-    + Graph Construction  
-    + Outlier Removal  
-    + Scagnostic Calculations  
+- Scagnostic Functions
+    + Scree object
+    + Scagnostic calculations  
+- Summary Functions   
+    + Wide and long data scagnostic summary
+    + Top Summary
 - Draw Functions  
     + MST, Convex Hull and Alpha hull
-
-## Name
-
-CAlculate Scagnostics on Scatterplots Over Wads of Associated Real numberYs in R
+- Data
+    + Datasaurus dozen/ Anscombe Quartet
+    + Features
 
 ???
-- now I know what you are all thinking
-- Wow thats so cool I wish I could do scagnsotic analysis
-- well, now you can
-- the Cassowary R packages has been written so you can incorperate calculating scagnostics into your tidy data workflow
-- the package basically has two main features, the calculate functions which calculate the scagnostics for you, and the draw functions which draw the graph objects so you can better understand the calculations outputs
-- The name is an acronym (if we get really liberable with the term acronym) and it stands for  CAlculate Scagnostics on Scatterplots Over Wads of Associated Real numberYs in R
+- The cassowaryr R packages has been written so you can incorperate calculating scagnostics into your tidy data workflow
+- The scagnostic functions will probably never be used by anyone on the user end because they are more under the hood functions
+- The summary functions are how most people will use the cassowaryr package. The long version calculated the scagnostics on two variables for each group in your data, and the wide version for each pair of variables.
+- There are two further summary statistics that find the top pairs and top scags for each scatter plot
+- The draw functions are mostly a debugging tool, they are designed to help you see the graph based objects so you can better understand the measure outputs
+- The package also comes with a bit of data, datasaurus dozen and Anscomb quartet are fameous data sets that look different but have the same summary statistics, and the features data made by us.
 
 ---
 
@@ -273,10 +285,8 @@ ggplot(features, aes(x,y,colour=feature))+
 ```
 
 ???
-- These are a set of unique scatter plots each have some kind of feature that we would want to identify.
-- They are also all distinct and we want our scagnostics to be able to tell that,
-- the Ring is a hollow version of the disk scatter plot, 
-- to capture these unique shapes we are going to need to change the way we see these scatter plots
+- The features dataset is a set of unique scatter plots each have some kind of distinct feature that we would want to identify.
+- For example, the Ring is a hollow version of the disk scatter plot, and we want the scagnostics to be able to identify the difference between them.
 
 ---
 
@@ -409,7 +419,7 @@ visual_table
 
 ???
 
-- This visual table shows all the scagnostic defined in previous literature
+- This visual table shows all the scagnostic defined in the Scagnostic Distributions paper.
 - On the x axis is the scagnostic value
 - On the y axis are the scagnostics
 - The points are scatter plots from the features data, each scagnostic has an example of a low value, a high value, and a moderate value, if it fits.
