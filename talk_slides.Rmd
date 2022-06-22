@@ -262,7 +262,32 @@ grid.arrange(d1,d2,d3, nrow=1)
 - We want them on a uniform scale so they are directly comparable
 - we also want them to order the scatter plots from something like the features data in a way that lines up with human intuition, it wont always happe, but most of the time
 - If they have high correlation the second scagnsotic is adding less to the package, but sometimes it is required for the scagnostics to be correlated, just because they are looking for similar things
+---
 
+
+# The CassowaryR Package
+## Structure
+
+- Calculate Functions   
+    + Wide and Long Versions  
+    + Graph Construction  
+    + Outlier Removal  
+    + Scagnostic Calculations  
+- Draw Functions  
+    + MST, Convex Hull and Alpha hull
+
+## Name
+
+CAlculate Scagnostics on Scatterplots Over Wads of Associated Real numberYs in R
+
+???
+- now I know what you are all thinking
+- Wow thats so cool I wish I could do scagnsotic analysis
+- well, now you can
+- the Cassowary R packages has been written so you can incorperate calculating scagnostics into your tidy data workflow
+- the package basically has two main features, the calculate functions which calculate the scagnostics for you, and the draw functions which draw the graph objects so you can better understand the calculations outputs
+- The name is an acronym (if we get really liberable with the term acronym) and it stands for  CAlculate Scagnostics on Scatterplots Over Wads of Associated Real numberYs in R
+  
 ---
 
 # A Scagnostic Visual Table
@@ -409,7 +434,7 @@ visual_table
 ---
 
 
-# Clumpy Adjusted (Current Work)
+# Clumpy Adjusted 
 
 ```{r,  Clumpy Comparison, include=FALSE}
 plot_data_clumpy <- plot_path_data %>%
@@ -477,10 +502,8 @@ clumpy_visual_table
 ---
 # AFLW Example: Quiz!
 ```{r, include=FALSE, eval=FALSE}
-
 aflw <- fetch_player_stats(2020, comp = "AFLW")
-
-load("data/aflw.rda")
+save(aflw, file="data/aflw.rda")
 
 aflw_num <- aflw %>%
   select_if(is.numeric)
@@ -490,8 +513,28 @@ aflw_num <- aggregate(aflw_num[,5:37],
   mean)
 save(aflw_num, file="data/aflw_num.rda")
 
-AFLW_scags <- calc_scags_wide(aflw_num[,2:34])
+AFLW_scags <- calc_scags_wide(aflw_num[,c(2,3,5:34)])
 save(AFLW_scags, file="data/AFLW_scags.rda")
+```
+
+```{r debug, eval=FALSE}
+devtools::load_all()
+library(fitzRoy)
+library(dplyr)
+library(dplyr)
+aflw <- fetch_player_stats(2020, comp = "AFLW")
+aflw_num <- aflw %>%
+  select_if(is.numeric)
+aflw_num <- aggregate(aflw_num[,5:37], 
+  list(aflw$player.player.player.surname),
+  mean)
+x <- aflw_num$goals
+y <- aflw_num$handballs
+dupes <- paste(x, y, sep =",")
+xy <- cbind(unitize(x), unitize(y))
+x <- xy[!duplicated(dupes),]
+y = NULL
+#scree(aflw_num$goals, aflw_num$handballs)
 ```
 
 ```{r, AFLW Scatter Plots, echo=FALSE, fig.height=5, fig.width=9, out.width = "95%", fig.align='center'}
@@ -688,51 +731,43 @@ ggplotly(s5)%>%
 - I find that so strange
 
 ---
-
-
-# The CassowaryR Package
-## Structure
-
-- Calculate Functions   
-    + Wide and Long Versions  
-    + Graph Construction  
-    + Outlier Removal  
-    + Scagnostic Calculations  
---
-- Draw Functions  
-    + MST, Convex Hull and Alpha hull
---
-
-## Name
-
-CAlculate Scagnostics on Scatterplots Over Wads of Associated Real numberYs in R
+# Is it on CRAN?
 
 ???
-- now I know what you are all thinking
-- Wow thats so cool I wish I could do scagnsotic analysis
-- well, now you can
-- the Cassowary R packages has been written so you can incorperate calculating scagnostics into your tidy data workflow
-- the package basically has two main features, the calculate functions which calculate the scagnostics for you, and the draw functions which draw the graph objects so you can better understand the calculations outputs
-- The name is an acronym (if we get really liberable with the term acronym) and it stands for  CAlculate Scagnostics on Scatterplots Over Wads of Associated Real numberYs in R
+- You may be thinking to yourself, wow what a neat package, is it on cran?
+- and the answer to that is no.
+
+--
   
+- no
+
+???
+- We were originally rejected because we depended on tripack and alphahull which both had an ACM lisence and even though these two packages are on CRAN, since they want to transition to only FOSS packages, we were rejected
+- Then, a couple months ago, alphahull was updated despite still being on an ACM license and so we applied for CRAN again and said "hey we have an ACM license for the same reason alphahull does, which is that we both depend on tripack" and CRAN said "if you need tripack so bad why dont you replace it"
+- Then we decided to make a FOSS package to replace tripack 
+- Unfortunately it seems the alphahull people were doing the same thing
+- and a couple weeks ago they released interp with is an open source version of tripack, and a few days ago updated alphahull to rely on interp
+- So... now we have a partially done, now obselete package, and I have to swap all the code over to using interp instead of tripack. 
+- Fun week
 ---
-# Future Timeline
-## Feasible
-- Fine tune the examples with the adjusted scagnostics
+# The Future of the Package
+## Near and probable
+- Debug issues from alphahull update
+- Get package on cran
 - R Journal Paper
   
-## Probably not Feasible
-- Hexagonal Binning
-  
-## Not Feasible
-- Improve Speed of Calculations
+## Distant and improbable
+- Hexagonal binning
+- Improve speed of calculations
+- Projection pursuit indexes
 
 ???
 - What is next for for cassowaryR package
-- First I want to finish the adjusted scagnostics
-- and then hopefully publish the thesis as a paper in the R journal
-- If i have any time left I want to implement hexagonal binning into the package so it can be used on very large datasets
-- Becuase improving the calculation speed of the current scagnostics is a bit of a pipe dream.
+- Until I literally had to stop to give this talk, I was debugging the issues with the alphahull update, so having the package working again is in the VERY near future
+- After that I'll re-enter the hellish landscape that is trying to get a package on CRAN and publishing a paper around it.
+- A version two of the package, will probably have an I'm proved speed, especially for the clumpy scagnostic, ill also introduce hexagonal binning so the original scagnostics aren't essentially useless.
+- I also want to continue to test the scagnostics as projection pursuit indexes and maybe also have those be easy to implement in another package. I have already started doing that but finishing it up always seems to be off in the distance.
+
 
 ---
 class: centre, middle
@@ -740,7 +775,7 @@ class: centre, middle
 
 - R package: https://github.com/numbats/cassowaryr
 - Paper: https://github.com/harriet-mason/paper-cassowaryr (private)
-- Slides: https://github.com/harriet-mason/presentation-cassowaryr (private)
+- Slides: https://github.com/harriet-mason/UserTalk_2022 
 
 ???
 - Thanks for listening,
