@@ -1,6 +1,6 @@
 ---
 title: "Teaching Computers to See Scatterplots with Scagnostics"
-author: "Harriet Mason"
+author: "Harriet Mason, Di Cook, Ursula Laa, and Stuart Lee"
 date: "2022/06/22"
 output:
   xaringan::moon_reader:
@@ -36,52 +36,223 @@ mypal <- c("#b2182b", "#d53e4f","#FF4E50", "#FC913A", "#fdae61",
            "#F9D423", "#fee08b" , "#abdda4" , "#a6d96a" , "#66c2a5" ,
            "#66bd63","#3B8183", "#3288bd", "#74add1",  "#abd9e9")
 
-style_mono_accent(
-  base_color = "#fb8072",
-  header_h1_font_size = "2.25rem",
-  header_h2_font_size = "1.75rem",
-  header_h3_font_size = "1.5rem",
-  header_font_google = google_font("Pangolin"),
-  text_font_google   = google_font("Pangolin"),
-  text_font_size = "1.5rem",
-  code_font_google   = google_font("Shadows Into Light Two"),
-  code_font_size = "0.5rem"
-) 
+#style_mono_accent(
+#  base_color = "#fb8072",
+#  header_h1_font_size = "2.25rem",
+#  header_h2_font_size = "1.75rem",
+#  header_h3_font_size = "1.5rem",
+#  header_font_google = google_font("Pangolin"),
+#  text_font_google   = google_font("Pangolin"),
+#  text_font_size = "1.5rem",
+#  code_font_google   = google_font("Shadows Into Light Two"),
+#  code_font_size = "0.5rem"
+#) 
 ```
 
 class: center, middle
 
 # Overview
-Scatter plots  -  Big data  -  Scagnostics  - Cassowaryr
+Big Data  -  Scagnostics  -  Cassowaryr  - AFLW
 
 ???
-- Hi everyone, so today before I'm going to be talking about the abstract world of scagnostics
+- Hi everyone, I'm Harriet Mason, a PhD student at Monash University, it is 4.30am here and I am very tired, so we will see how this goes. 
+- Today before I'm going to be talking about looking at scatter plots with scagnostics
 - so, scatterplots are particularly useful for examining all kinds of association between variables, 
 - but unfortunately big data has too many variables to plot them all, 
 - A solution to this are measures known as a scagnostics which measure the visual features of a scatterplot, 
-- i've implemented these scagnostics in a new R package called cassowaryr, which ill explain the strutre of 
-- then finally to show the practical applications of scagnostics I have an example in exploring AFLW statistics, 
+- Today I'm going to explain how scagnostics work,
+- then i'm going to explain the cassowaryr package that calculates the scagnostics,
+- and finally I'll show how you can use the package yourself by going through an example in exploring Australian football league statistics, 
 
 ---
 
-# How Have Other people Used Scagnostics?
-- Identify interesting sub-sequences from multivariable time series data (TimeSeer) (Dang et al, 2013)
-  
+# How Do Scagnostics Work?
 
-- Sample panels from a trellis display (Hafen et al, 2013)
+Take this "Ring" scatter plot...
   
-- Select good partitioning variables for small multiple displays (Anand et al 2015)
+```{r, Example Data, include=FALSE, echo=FALSE, warning=FALSE}
+example <- features %>% filter(feature=="ring") %>%
+  select(x,y)
+```
+
+```{r, Ring Scatter,fig.width=5, fig.height=5, fig.align='center', echo=FALSE}
+ggplot(example, aes(x,y)) + geom_point(colour = "#3288bd") + theme_minimal() 
+
+```
+???
+- So you can see how these scagnostics work I'm going to go through the process of how they are calculated with a single scatter plot
+- Fist we start with this interestingly shaped "ring" scatter plot.
+---
+
+# How Do Scagnostics Work?
+
+... and strip away everything but it's shape
   
-- Use them to choose appropriate data transformations (Dang et al, 2014)
-  
-- Explore interesting low-dimensional random projections of high-dimensional data (Laa et al, 2018)
-  
+```{r, Void Scatter,fig.width=5, fig.height=5, fig.align='center', echo=FALSE}
+ggplot(example, aes(x,y)) + geom_point() + theme_void() + #colour = "#3288bd"
+  theme(aspect.ratio=1, axis.text = element_blank()
+        ) 
+```
+
 
 ???
-- So, we are going to use the scagnsotics on sports data, but where have other people used them
-- my favourite is the use in the timeseer paper. 
-- In the timeseer paper scagnsotics were used to identify periods of time where two variables, like GDP and Inflation had a similar shape across the scatter plots of countries
-- They have an interactive trellis plot made using the package trelliscope and it uses scagnostics in one of its features
+- then we want want to remove the numbers and just look at the points in relation to each other
+- from here we want to make several objects that represent their shape,
+
+---
+
+# How Do Scagnostics Work?
+
+... then build the graph based objects
+
+```{r, include=FALSE}
+d1 <- draw_convexhull(example$x, example$y) +
+  ggtitle("Convex hull") +
+  xlab("") + ylab("") +
+  theme_void() +
+  theme(aspect.ratio=1, axis.text = element_blank())
+
+d2 <- draw_alphahull(example$x, example$y) +
+  ggtitle("Alpha hull") +
+  xlab("") + ylab("") +
+  theme_void() +
+  theme(aspect.ratio=1, axis.text = element_blank())
+
+d3 <- draw_mst(example$x, example$y) +
+  ggtitle("Minimum Spanning Tree (MST)") +
+  xlab("") + ylab("") +
+  theme_void() +
+  theme(aspect.ratio=1, axis.text = element_blank())
+```
+
+```{r, echo=FALSE, fig.align='left', fig.height=4, fig.width=10, warning=FALSE}
+grid.arrange(d1,d2,d3, nrow=1)
+
+```
+
+
+???
+
+- the convex hull, the shape we would get if we stretched a rubber band around the outside of the MST
+- the alpha hull is made by tracing around the outside of the shape
+- the MST is the minimum spanning tree, that is, we join up all the dots using as little edges as possible
+- using these three objects we can define our scagnostics
+
+---
+
+# The Scagnostics
+.pull-left[
+- Convex and Alpha Hull Measures
+    + Convex
+    + Skinny
+]
+
+.pull-right[
+- MST Measures
+    + Outlying
+    + Clumpy*
+    + Striated*
+    + Sparse
+    + Skewed
+    + Stringy
+]
+
+
+- Association Measures
+    + Monotonic
+    + Splines
+    + Dcor
+
+
+???
+- This is a list of all the working scagnostics sorted into their three groups depending on which graph based object they use
+- Those with an astrix have two versions, the ones from the original scagnostic distributions paper that this package is based upon, as well as a new adjusted version that was created to solve some isues with binning that I will get to later. 
+
+
+---
+
+# The Scagnostics
+Convex uses the alpha hull and convex hull
+  
+```{r echo=FALSE, out.height=200, out.width= 500}
+knitr::include_graphics("figures/drawconvex.png")
+```
+
+???
+- an example of a hull based scagnostic is convex, it just takes the ratio of the two hull areas
+
+---
+
+# The Scagnostics
+
+Outlying uses the MST
+  
+```{r echo=FALSE, out.height=250, out.width= 600}
+knitr::include_graphics("figures/drawoutlying.png")
+```
+
+???
+- outlying is an example of an minimum spanning tree object
+- we first identify the outlying points and the length of their edges, then we calculate how much of the total MST length is due to these outling edges
+
+---
+
+# The Scagnostics
+
+Splines using the original data
+
+```{r echo=FALSE, out.height=200, out.width= 800}
+knitr::include_graphics("figures/drawsplines.png")
+```
+
+???
+- splines is an example of an association measure, so it take in the raw data
+- it calculates a two splines models, one with x as a dependent variable and one with y as the dependent variable
+- if either of these splines models have very low variance in their residuals, the splines scagnostic will be high
+
+
+---
+
+# Assessing the Scagnostics
+
+- All are on a uniform scale: 0-1, where 0 is low and 1 is high
+  
+- The ordering by scagnostic value hopefully matches how we perceive the structure, but it doesn't always
+  
+- Scagnostics hopefully identify different features but some are correlated with each other
+
+ 
+
+???
+
+- We want to assess the current scagnostics before we make any changes to them, yknow, make sure they work as intended
+- We want them on a uniform scale so they are directly comparable
+- we also want them to order the scatter plots from something like the features data in a way that lines up with human intuition, it wont always happe, but most of the time
+- If they have high correlation the second scagnsotic is adding less to the package, but sometimes it is required for the scagnostics to be correlated, just because they are looking for similar things
+---
+
+# The CassowaryR Package
+## Structure
+
+- Calculate Functions   
+    + Wide and Long Versions  
+    + Graph Construction  
+    + Outlier Removal  
+    + Scagnostic Calculations  
+- Draw Functions  
+    + MST, Convex Hull and Alpha hull
+
+## Name
+
+CAlculate Scagnostics on Scatterplots Over Wads of Associated Real numberYs in R
+
+???
+- now I know what you are all thinking
+- Wow thats so cool I wish I could do scagnsotic analysis
+- well, now you can
+- the Cassowary R packages has been written so you can incorperate calculating scagnostics into your tidy data workflow
+- the package basically has two main features, the calculate functions which calculate the scagnostics for you, and the draw functions which draw the graph objects so you can better understand the calculations outputs
+- The name is an acronym (if we get really liberable with the term acronym) and it stands for  CAlculate Scagnostics on Scatterplots Over Wads of Associated Real numberYs in R
 
 ---
 
@@ -107,187 +278,6 @@ ggplot(features, aes(x,y,colour=feature))+
 - the Ring is a hollow version of the disk scatter plot, 
 - to capture these unique shapes we are going to need to change the way we see these scatter plots
 
----
-
-
-# How Do They Work?
-
-Take the "Ring" scatter plot...
-  
-```{r, Example Data, include=FALSE, echo=FALSE, warning=FALSE}
-example <- features %>% filter(feature=="ring") %>%
-  select(x,y)
-```
-
-```{r, Ring Scatter,fig.width=6, fig.height=6, fig.align='center', echo=FALSE}
-ggplot(example, aes(x,y)) + geom_point(colour = "#3288bd") + theme_minimal() 
-
-```
-
----
-
-# How Do They Work?
-
-... and strip away everything but it's shape
-  
-```{r, Void Scatter,fig.width=6, fig.height=6, fig.align='center', echo=FALSE}
-ggplot(example, aes(x,y)) + geom_point() + theme_void() + #colour = "#3288bd"
-  theme(aspect.ratio=1, axis.text = element_blank()
-        ) 
-```
-
-
-???
-- we want to remove the numbers and just look at the points in relation to each other
-- from here we want to make several objects that represent their shape,
-
----
-
-# How Do They Work?
-
-... then build the graph based objects
-
-```{r, include=FALSE}
-d1 <- draw_convexhull(example$x, example$y) +
-  ggtitle("Convex hull") +
-  xlab("") + ylab("") +
-  theme_void() +
-  theme(aspect.ratio=1, axis.text = element_blank())
-
-d2 <- draw_alphahull(example$x, example$y) +
-  ggtitle("Alpha hull") +
-  xlab("") + ylab("") +
-  theme_void() +
-  theme(aspect.ratio=1, axis.text = element_blank())
-
-d3 <- draw_mst(example$x, example$y) +
-  ggtitle("Minimum Spanning Tree (MST)") +
-  xlab("") + ylab("") +
-  theme_void() +
-  theme(aspect.ratio=1, axis.text = element_blank())
-```
-
-```{r, echo=FALSE, fig.align='left', fig.height=6, fig.width=15, warning=FALSE}
-grid.arrange(d1,d2,d3, nrow=1)
-
-```
-
-
-???
-
-- the convex hull, the shape we would get if we stretched a rubber band around the outside of the MST
-- the alpha hull is made by tracing around the outside of the shape
-- the MST is the minimum spanning tree, that is, we join up all the dots using as little edges as possible
-- using these three objects we can define our scagnostics
----
-
-# How Do They Work?
-... Convex using the alpha convex hull
-  
-.center[![Convex-Scagnostic](figures/drawconvex.png)]
-
-???
-- an example of a hull based scagnostic is convex, it just takes the ratio of the two hull areas
-
----
-
-# How Do They Work?
-
-... Outlying using the MST
-  
-.center[![Outlying-Scagnostic](figures/drawoutlying.png)]
-
-???
-- outlying is an example of an minimum spanning tree object
-- we first identify the outlying points and the length of their edges, then we calculate how much of the total MST length is due to these outling edges
-
----
-
-# How Do They Work?
-
-... and Splines using the original data
-
-.centre[![Splines-Scagnostic](figures/drawsplines.png)]
-
-???
-- splines is an example of an association measure, so it take in the raw data
-- it calculates a two splines models, one with x as a dependent variable and one with y as the dependent variable
-- if either of these splines models have very low variance in their residuals, the splines scagnostic will be high
-
----
-
-# The Scagnostics
-.pull-left[
-- Convex and Alpha Hull Measures
-    + Convex
-    + Skinny
-]
---
-.pull-right[
-- MST Measures
-    + Outlying
-    + Clumpy*
-    + Striated*
-    + Sparse
-    + Skewed
-    + Stringy
-]
---
-
-- Association Measures
-    + Monotonic
-    + Splines
-    + Dcor
-
-
-???
-- This is a list of all the working scagnostics sorted into their three groups
-- Those with an astrix have two versions, the ones from the original scagnostic distributions paper as well as an adjustment made by me. 
-
----
-
-# Assessing the Scagnostics
-
-- All are on a uniform scale: 0-1, where 0 is low and 1 is high
-  
-- The ordering by scagnostic value hopefully matches how we perceive the structure, but it doesn't always
-  
-- Scagnostics hopefully identify different features but some are correlated with each other
-
- 
-
-???
-
-- We want to assess the current scagnostics before we make any changes to them, yknow, make sure they work as intended
-- We want them on a uniform scale so they are directly comparable
-- we also want them to order the scatter plots from something like the features data in a way that lines up with human intuition, it wont always happe, but most of the time
-- If they have high correlation the second scagnsotic is adding less to the package, but sometimes it is required for the scagnostics to be correlated, just because they are looking for similar things
----
-
-
-# The CassowaryR Package
-## Structure
-
-- Calculate Functions   
-    + Wide and Long Versions  
-    + Graph Construction  
-    + Outlier Removal  
-    + Scagnostic Calculations  
-- Draw Functions  
-    + MST, Convex Hull and Alpha hull
-
-## Name
-
-CAlculate Scagnostics on Scatterplots Over Wads of Associated Real numberYs in R
-
-???
-- now I know what you are all thinking
-- Wow thats so cool I wish I could do scagnsotic analysis
-- well, now you can
-- the Cassowary R packages has been written so you can incorperate calculating scagnostics into your tidy data workflow
-- the package basically has two main features, the calculate functions which calculate the scagnostics for you, and the draw functions which draw the graph objects so you can better understand the calculations outputs
-- The name is an acronym (if we get really liberable with the term acronym) and it stands for  CAlculate Scagnostics on Scatterplots Over Wads of Associated Real numberYs in R
-  
 ---
 
 # A Scagnostic Visual Table
@@ -729,6 +719,27 @@ ggplotly(s5)%>%
 -  hitouts are when you punch the ball when the ref throws it back in and they are done by your tall players, bounces have to be done while running so they are done by your fast players
 - in AFL these two categories seem to have no overlap
 - I find that so strange
+
+---
+
+# How Have Other people Used Scagnostics?
+- Identify interesting sub-sequences from multivariable time series data (TimeSeer) (Dang et al, 2013)
+  
+
+- Sample panels from a trellis display (Hafen et al, 2013)
+  
+- Select good partitioning variables for small multiple displays (Anand et al 2015)
+  
+- Use them to choose appropriate data transformations (Dang et al, 2014)
+  
+- Explore interesting low-dimensional random projections of high-dimensional data (Laa et al, 2018)
+  
+
+???
+- So, we are going to use the scagnsotics on sports data, but where have other people used them
+- my favourite is the use in the timeseer paper. 
+- In the timeseer paper scagnsotics were used to identify periods of time where two variables, like GDP and Inflation had a similar shape across the scatter plots of countries
+- They have an interactive trellis plot made using the package trelliscope and it uses scagnostics in one of its features
 
 ---
 # Is it on CRAN?
