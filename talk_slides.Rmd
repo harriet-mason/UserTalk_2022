@@ -897,7 +897,7 @@ htmltools::save_html(pg, file="scagtour.html")
 - The use for scagnostics as a projection pursuit index with the tour package is not in the cassowaryr package and some of the measures are not well suited to be used as projection pursuit indexes, either due to being too slow or noisey, but this is an area of future development for scagnostics.
 
 ---
-# Is it on CRAN?
+# Is It on CRAN?
 
 ???
 - You may be thinking to yourself, wow what a neat package, is it on cran?
