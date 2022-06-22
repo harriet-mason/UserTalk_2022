@@ -14,7 +14,7 @@ knitr::opts_chunk$set(
         echo = FALSE,
         warning = FALSE, 
         message = FALSE,
-        fig.retina = 5)
+        fig.retina = 6)
 ```
 
 ```{r loadlibrary, include=FALSE, echo=FALSE}
@@ -289,16 +289,24 @@ ggplot(features, aes(x,y,colour=feature))+
 - For example, the Ring is a hollow version of the disk scatter plot, and we want the scagnostics to be able to identify the difference between them.
 
 ---
+# Features Scagnostics 
+
+```{r, echo=TRUE}
+# Calculate the scagnostics
+features_scagnostics_wide <- features %>%
+  group_by(feature) %>%
+  summarise(calc_scags(x,y))
+
+# Look at the output
+features_scagnostics_wide[1:5, 1:6]
+```
+???
+- Because the features data set is a long data set, we use group by with the `calc_scags()` function to get a scagnostic summary of the data set
+---
 
 # A Scagnostic Visual Table
 
 ```{r, Scag Calculation, include=FALSE}
-# run scagnostics
-features_scagnostics_wide <- features %>%
-  group_by(feature) %>%
-  summarise(calc_scags(x,y)) #%>%
-  #select(-clumpy_adjusted)
-
 #long version of
 features_scagnostics_long <- features_scagnostics_wide %>%
   pivot_longer(cols=outlying:dcor, names_to = "scagnostic")
@@ -312,7 +320,8 @@ t_features_scagnostics_wide <- features_scagnostics_long %>%
 
 #set theme so all scatter plots in table match
 plot_theme <-  theme_void() + #theme_minimal() + 
-  theme(aspect.ratio=1, axis.title=element_blank(), axis.text = element_blank(), 
+  theme(aspect.ratio=1, axis.title=element_blank(), axis.text = element_blank(),
+        panel.background = element_rect(fill="white", colour="white"),
         panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
         #panel.border = element_rect(colour = "black", fill=NA, size=5),
         legend.position = "none"
@@ -413,23 +422,22 @@ visual_table <- ggplot(plot_data, aes(x=value , y=scagnostic, colour=feature))+
 #ggsave("figures/visual_table.png", visual_table, width=10, height=10)
 ```
 
-```{r, Show Visual Table, echo=FALSE, fig.height=6, fig.width=9, out.width = "100%", fig.align='center'}
+```{r, Show Visual Table, echo=FALSE, fig.height=5, fig.width=7.5, out.width = "100%", fig.align='center'}
 visual_table
 ```
 
 ???
-
-- This visual table shows all the scagnostic defined in the Scagnostic Distributions paper.
+- Taking the full results from that calulcation we can make a visual table and have a look at what each scagnostic is looking for
 - On the x axis is the scagnostic value
 - On the y axis are the scagnostics
 - The points are scatter plots from the features data, each scagnostic has an example of a low value, a high value, and a moderate value, if it fits.
 - Here we can see the scagnostics working as intended
 - for example Stringy places a deterministic relationship above a random one
-- if you are paying close attention you may have noticed that the scagnostics based on the MST are the ones that most freuently have only 1 plot, and that their distributions are regularly condensed into a smaller set of values
+- if you are paying close attention you may have noticed that the scagnostics based on the MST are the ones that most freuently have only 1 or two plot, this is because distributions are very condensed 
 - This is a small issue we ran into with the package
 - all previous work in scagnostics had binning as a pre processing step, we want binning to be optional in the cassowaryr package
 - when we removed binning and allowed for infinitely small edges in the MST, it warped a few of the scagnostics
-- and so to allow for this I have designed some adjusted scagnostics
+- and so to try and fix this, we have designed some adjusted scagnostics
 
 ---
 
